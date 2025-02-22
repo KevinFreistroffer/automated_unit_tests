@@ -9,7 +9,7 @@ interface ButtonProps {
 export const Button: React.FC<ButtonProps> = ({ 
   label, 
   onClick, 
-  variant = 'primary' 
+  variant = 'primary',
 }) => {
   return (
     <button 

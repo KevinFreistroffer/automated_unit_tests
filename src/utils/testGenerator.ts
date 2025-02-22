@@ -2,6 +2,12 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { parseFileContent } from './parser';
 
+interface Prop {
+  name: string;
+  type: string;
+  required: boolean;
+}
+
 export async function generateTest(filePath: string) {
   const content = await fs.readFile(filePath, 'utf-8');
   const parsedContent = await parseFileContent(content);
@@ -33,19 +39,30 @@ function getTestFilePath(sourceFilePath: string): string {
 }
 
 function generateTestContent(parsedContent: any, filename: string): string {
-  // Remove the file extension for imports
   const baseFilename = filename.replace(/\.(tsx?|jsx?)$/, '');
   
-  // Basic template for React component test
   if (parsedContent.isReactComponent) {
+    const mockProps = parsedContent.props
+      ?.filter((prop: Prop) => prop.required)
+      .map((prop: Prop) => {
+        switch (prop.type) {
+          case 'string': return `${prop.name}="test"`;
+          case '() => void': return `${prop.name}={() => {}}`;
+          case 'number': return `${prop.name}={1}`;
+          default: return `${prop.name}={${prop.type === 'boolean' ? 'true' : 'null'}}`;
+        }
+      })
+      .join(' ');
+
     return `
+import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ${parsedContent.componentName} } from './${baseFilename}';
 
 describe('${parsedContent.componentName}', () => {
   it('renders without crashing', () => {
-    render(<${parsedContent.componentName} onClick={() => {}} />);
+    render(<${parsedContent.componentName} ${mockProps} />);
   });
 });
 `;

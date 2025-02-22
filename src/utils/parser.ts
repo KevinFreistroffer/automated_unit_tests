@@ -6,6 +6,11 @@ interface ParsedContent {
   hasFunctions: boolean;
   componentName?: string;
   exportedFunctions: string[];
+  props?: {
+    name: string;
+    type: string;
+    required: boolean;
+  }[];
 }
 
 export function parseFileContent(content: string): ParsedContent {
@@ -55,6 +60,23 @@ export function parseFileContent(content: string): ParsedContent {
         if (ts.isFunctionDeclaration(node) && node.name) {
           parsed.exportedFunctions.push(node.name.getText());
         }
+      }
+    }
+
+    if (ts.isInterfaceDeclaration(node)) {
+      if (node.name.getText().endsWith('Props')) {
+        parsed.props = node.members
+          .map(member => {
+            if (ts.isPropertySignature(member)) {
+              return {
+                name: member.name.getText(),
+                type: member.type?.getText() || 'any',
+                required: !member.questionToken
+              };
+            }
+            return null;
+          })
+          .filter((prop): prop is { name: string; type: string; required: boolean } => prop !== null);
       }
     }
 
